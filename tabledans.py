@@ -54,23 +54,29 @@ class TabledANS:
         freq_sum = np.sum(list(symbol_occurrences.values()))
         if freq_sum != self.tableSize:
             # Normalize frequencies table
-            freq_norm = [np.floor(self.tableSize * symbol_occurrences[sym] / freq_sum) for sym in symbol_occurrences.keys()]
+            freq_norm = np.array([np.floor(self.tableSize * symbol_occurrences[sym] / freq_sum) for sym in symbol_occurrences.keys()])
             for i in range(len(freq_norm)):
                 if freq_norm[i] == 0:
                     freq_norm[i] += 1
 
             freq_sum_norm = np.sum(freq_norm)
             reminder = self.tableSize - freq_sum_norm
-            for i in range(len(freq_norm)):
-                if reminder == 0:
-                    break
-                elif reminder > 0:
+            if reminder < 0:
+                delta = reminder // freq_norm[freq_norm > 1].size
+                for i in range(len(freq_norm)):
+                    if reminder == 0:
+                        break
+                    if freq_norm[i] > 1:
+                        freq_norm[i] += delta if reminder <= delta else reminder
+                        reminder -= delta if reminder <= delta else reminder
+            elif reminder > 1:
+                for i in range(len(freq_norm)):
+                    if reminder == 0:
+                        break
                     freq_norm[i] += 1
                     reminder -= 1
-                elif freq_norm[i] > 1:
-                    freq_norm[i] -= 1
-                    reminder += 1
 
+            assert freq_norm.sum() == self.tableSize
             symbol_occurrences = dict([(k, int(freq_norm[i])) for i, k in enumerate(symbol_occurrences.keys())])
         
         ####
@@ -192,3 +198,7 @@ class TabledANS:
             output = [symbol] + output
 
         return output
+
+    @property
+    def totalTablesSize(self):
+        return len(self.codingTable) + 3*len(self.decodeTable) + 2*len(self.symbolTT)
